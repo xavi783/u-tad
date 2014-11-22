@@ -1,0 +1,34 @@
+Origenes de datos:
+
+Normalmente la información de los clientes se almacenará en una base de datos relacional, mientras
+que los logs se persistirán en otro tipo de fuente de datos como ficheros de texto planos.
+
+- Para subir datos de DB a Hadoop:
+
+	Sqoop: nos permite subir datos de una DB  a Hadoop de forma incremental	escribiendo en el fichero
+	hadoop correspondiente.
+
+- Para subir información de logs generados en tiempo real:
+
+	Flume: es un sistema que permite subir datos generados en tiempo real a ficheros de hadoop
+	antes de que se cierren, de forma incremental, se basa en un modelo de streaming para copiar
+	los datos, pudiendo ser el origen de los mismo un fichero, otro stream flume...
+
+Trabajos de Hadoop:
+
+	Job 1: se aplicará a facturas (DB), con él trataremos de conocer qué clientes han comprado en un día concreto:
+		- Mapper: extraerá un conjunto de tuplas (Fecha, Cliente) tal que K1=Fecha y V1=Cliente
+		- Reducer: crearáuna lista con los clientes que compraron en una fecha concreta -> (Fecha, list(Clientes))
+
+	Job 2: se aplicará a los logs, extreaerá los clientes que entraron en la web en un dia concreto:
+		-Mapper: extraerá un conjunto de tuplas (Fecha, Cliente) tal que K1=Fecha y V1=Cliente
+		- Reducer: crearáuna lista con los clientes que entraron en la web en una fecha concreta -> (Fecha, list(Clientes))
+
+	Job 3: se encargará de calcula la diferencia entra las listas de Job1 y las de Job2 para cada fecha concreta, obteniendo
+	los clientes que entraron y no compraron, ya que los clientes que compraron es un subconjunto de los clientes que entraron
+	en la web.
+		-Mapper: recibirá las salidas de los reducers de Job1 y Job2 y los devolverá talcuál, aquí no se hará ningún trabajo efectivo
+		-Reducer: cada clave solo contendrá 2 listas asociadas (clientes que entraron, clientes que compraron), por tanto el mapper
+		leerá el valor de una clave (lista de clientes), lo almacenará en memoria, leerá el segundo valor para esa misma clave (otra lista de clientes),
+		 y calculará la diferencia entre ambos valores devolviéndola a un archivo hadoop.
+
