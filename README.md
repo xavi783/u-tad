@@ -8,8 +8,8 @@ Este es el repositorio con los ejercicios del máster primera edición de Data S
 
  En cada carpeta ademas se adjunta un script de linux que permite ejecutar los trabajos de 2 formas diferentes:
 
- * Por un lado se pueden lanzar en local, para ello se debe ejecutar `. hadoop_job.sh` y despues `test_local`
- * Por otro lado se pueden lanzar contra hadoop, primero ejecutando `. hadoop_job.sh` y despues `test_hadoop`
+ * Por un lado se pueden lanzar en local, para ello se debe ejecutar `. command.sh` y despues `test_local`
+ * Por otro lado se pueden lanzar contra hadoop, primero ejecutando `. command.sh` y despues `test_hadoop`
 
  Tambien se adjunta una carpeta `/results` con los resultados obtenidos de la ejecucion contra hadoop, asi como los archivos txt con los datos necesarios para hacer las pruebas
 
@@ -21,28 +21,28 @@ Este es el repositorio con los ejercicios del máster primera edición de Data S
     ├── Modulo4
     │   ├── clientes.txt
     │   ├── ejercicio1
-    │   │   ├── hadoop_job.sh
+    │   │   ├── command.sh
     │   │   ├── mapper.py
     │   │   ├── reducer.py
     │   │   └── results
     │   │       ├── part-00000
     │   │       └── _SUCCESS
     │   ├── ejercicio2
-    │   │   ├── hadoop_job.sh
+    │   │   ├── command.sh
     │   │   ├── mapper.py
     │   │   ├── reducer.py
     │   │   └── results
     │   │       ├── part-00000
     │   │       └── _SUCCESS
     │   ├── ejercicio3
-    │   │   ├── hadoop_job.sh
+    │   │   ├── command.sh
     │   │   ├── mapper.py
     │   │   ├── reducer.py
     │   │   └── results
     │   │       ├── part-00000
     │   │       └── _SUCCESS
     │   ├── ejercicio4
-    │   │   ├── hadoop_job.sh
+    │   │   ├── command.sh
     │   │   ├── mapper.py
     │   │   ├── reducer.py
     │   │   └── results
