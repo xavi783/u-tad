@@ -1,0 +1,138 @@
+1,CPRO,Código de provincia
+2,CMUN,Código o tamaño de municipio
+3,IDHUECO,Identificador de hueco
+4,NORDEN,Número final de la persona dentro del hueco
+5,FACTOR,Factor de elevación de la persona
+6,MNAC,Mes de nacimiento 
+7,ANAC,Año de nacimiento 
+8,EDAD,Edad
+9,SEXO,Sexo
+10,NACI,Código país de nacionalidad
+11,CPAISN,Código país de nacimiento
+12,CPRON,Código provincia de nacimiento
+13,CMUNN,Código o tamaño municipio de nacimiento
+14,ANORES,Año de llegada a la vivienda
+15,ANOM,Año de llegada al municipio
+16,ANOC,Año de llegada a la Comunidad Autónoma
+17,ANOE,Año de llegada a España
+18,CLPAIS,Código país de residencia anterior
+19,CLPRO,Código provincia de residencia anterior
+20,CLMUNP,Código o tamaño municipio de residencia anterior
+21,CPAISUNANO,Código país de residencia hace 1 año
+22,CPROUNANO,Código provincia de residencia hace 1 año
+23,CMUNANO,Código o tamaño municipio de residencia hace 1 año
+24,CPAISDANO,Código país de residencia hace 10 años
+25,CPRODANO,Código provincia de residencia hace 10 años
+26,CMUNDANO,Código o tamaño municipio de residencia hace 10 años
+27,SEG_VIV,Pasa más de 14 noches en segundo municipio
+28,SEG_PAIS,Codigo de país donde pasa más de 14 noches
+29,SEG_PROV,Código de provincia donde pasa más de 14 noches
+30,SEG_MUN,Código o tamaño de municipio donde pasa más de 14 noches
+31,SEG_NOCHES,Número de noches
+32,SEG_DISP,Disponibilidad vivienda en segundo municipio
+33,ECIVIL,Estado civil
+34,ESCOLAR,Acude a un centro escolar
+35,ESREAL,Nivel de estudios completados
+36,TESTUD,Tipo de estudios realizados
+37,TAREA1,Cuidar a un menor de 15 años
+38,TAREA2,Cuidar a una persona con problemas de salud
+39,TAREA3,Tareas benéficas o voluntariado social
+40,TAREA4,Encargárse de la mayor parte de las tareas domésticas de su hogar
+41,HIJOS,Indicador de si la mujer ha tenido hijos
+42,NHIJOS,Número de hijos de la mujer
+43,RELA,Relación con la actividad
+44,JORNADA,Tipo de jornada de trabajo
+45,CNO,Código de ocupación a 2 dígitos
+46,CNAE,Código de actividad económica a 2 dígitos
+47,SITU,Situación profesional
+48,ESCUR1,Estudios en curso
+49,ESCUR2,Estudios en curso
+50,ESCUR3,Estudios en curso
+51,LTRABA,Lugar de trabajo o estudio
+52,PAISTRABA,País de trabajo o estudio
+53,PROTRABA,Provincia de trabajo o estudio
+54,MUNTRABA,Municipio de trabajo o estudio
+55,CODTRABA,Código postal de trabajo o estudio
+56,NVIAJE,Número de viajes diarios
+57,MDESP1,Medio de desplazamiento
+58,MDESP2,Medio de desplazamiento
+59,TDESP,Tiempo de desplazamiento
+60,TENEN,Régimen de tenencia
+61,CALE,Calefacción 
+62,ASEO,Cuanto de aseo con inodoro
+63,BADUCH,Baño o ducha
+64,INTERNET,Acceso a Internet
+65,AGUACOR,Sistema de suministro de agua
+66,SUT,Superficie útil
+67,NHAB,Número de habitaciones
+68,PLANTAS,Número de plantas sobre rasante
+69,PLANTAB,Número de plantas bajo rasante
+70,TIPOEDIF,Tipo de edificio
+71,ANOCONS,Año de construcción
+72,ESTADO,Estado del edificio
+73,ASCENSOR,Ascensor en el edificio
+74,ACCESIB,Accesibilidad del edificio
+75,GARAJE,Garaje
+76,PLAZAS,Número de plazas de garaje
+77,GAS,Gas
+78,TELEF,Tendido telefónico
+79,ACAL,Agua caliente central
+80,RESID,Evacuación de aguas residuales
+81,FAMILIA,Número de familia dentro del hogar
+82,PAD_NORDEN,NORDEN del padre
+83,MAD_NORDEN,NORDEN de la madre
+84,CON_NORDEN,NORDEN del cónyuge o pareja
+85,OPA_NORDEN,NORDEN de otro pariente
+86,TIPOPER,Condición dentro del núcleo
+87,NUCLEO,Número de núcleo dentro del hogar
+88,NMIEM,Tamaño del hogar
+89,NFAM,Número de familias en el hogar
+90,NNUC,Número de núcleos en el hogar
+91,NGENER,Número de generaciones en el hogar
+92,ESTHOG,Estructura del hogar
+93,TIPOHOG,Tipo de hogar
+94,NOCU,Número de ocupados del hogar
+95,NPARAIN,Número de parados o inactivos del hogar
+96,NPFAM,Número de personas en familia
+97,NPNUC,Número de personas que pertenecen a algún núcleo
+98,HM5,Número de personas de 0 a 4 años en el hogar
+99,H0515,Número de personas de 5 a 15 años en el hogar
+100,H1624,Número de personas de 16 a 24 años en el hogar
+101,H2534,Número de personas de 25 a 34 años en el hogar
+102,H3564,Número de personas de 35 a 64 años en el hogar 
+103,H6584,Número de personas de 65 a 84 años en el hogar 
+104,H85M,Número de personas del hogar de 85 años o más en el hogar
+105,HESPHOG,Hombres españoles en el hogar
+106,MESPHOG,Mujeres españolas en el hogar
+107,HEXTHOG,Hombres extranjeros en el hogar
+108,MEXTHOG,Mujeres extranjeras en el hogar
+109,COMBINAC,Combinación de nacionalidades en el hogar
+110,EDADPAD,Edad grupos quinquenales del padre
+111,PAISNACPAD,País de nacimiento del padre
+112,NACIPAD,Nacionalidad del padre
+113,ECIVPAD,Estado civil del padre
+114,ESTUPAD,Nivel de estudios del padre (en grados)
+115,SITUPAD,Relación con la actividad del padre
+116,SITPPAD,Situación profesional del padre
+117,EDADMAD,Edad grupos quinquenales de la madre
+118,PAISNACMAD,País de nacimiento de la madre
+119,NACIMAD,Nacionalidad de la madre
+120,ECIVMAD,Estado civil de la madre
+121,ESTUMAD,Nivel de estudios de la madre (en grados)
+122,SITUMAD,Relación con la actividad de la madre
+123,SITPMAD,Situación profesional de la madre
+124,EDADCON,Edad grupos quinquenales del cónyuge
+125,NACCON,País de nacimiento del cónyuge
+126,NACICON,Nacionalidad del cónyuge
+127,ECIVCON,Estado civil del cónyuge
+128,ESTUCON,Nivel de estudios del cónyuge (en grados)
+129,SITUCON,Relación con la actividad del cónyuge
+130,SITPCON,Situación profesional del cónyuge
+131,TIPONUC,Tipo de núcleo
+132,TAMNUC,Tamaño del núcleo
+133,NHIJO,Número de hijos
+134,NHIJOC,Número de hijos comunes del núcleo
+135,FAMNUM,Indicador de familia numerosa
+136,TIPOPARECIV,Tipo de pareja(de hecho o de derecho)
+137,TIPOPARSEX,Tipo de pareja(mismo sexo,distinto sexo) 
+138,DIFEDAD,Diferencia de edad entre hombre y mujer del núcleo

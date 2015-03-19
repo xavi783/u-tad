@@ -1,0 +1,143 @@
+---
+title: "Ejercicio4"
+author: "jserrano"
+date: "04/01/2015"
+output:
+  html_document:
+    toc: true
+---
+
+## plyr, dplyr y data.table (2 puntos) ##
+Descarga los microdatos del censo del 2011 de http://goo.gl/guhG1M. Puedes bajar el nacional o, si tienes problemas de memoria, alguno de los regionalizados. En esa página hay también información sobre las variables contenidas en el fichero y su formato. Puedes leerlo en R usando el paquete MicroDatosEs. Consulta la ayuda de la función censo2010.
+
+El ejercicio consiste en identificar algunas variables de tu interés y construir tablas por los indicadores que creas convenniente. Por ejemplo, población por sexo y grupo de edad en cada provincia. O proporción de viudos y viudas por tramo de edad y provincia. O...
+
+Eso sí: hazlo usando los dos paquetes dplyr y data.table (¿y reshape2?). Trata también con plyr. Añade un comentario sobre la velocidad relativa de los distintos paquetes para procesar los datos. ¿Cuál es tu favorito?
+
+Nota: Una columna muy importante en el censo es el factor de elevación. Para contar la población de España habria que hacer sum(factorel) donde factorel es el nombre que podría recibir esa columna. Hay un ejemplo práctico de cómo usar el factor de elevación en http://goo.gl/U6Ys8W.
+
+## Paso 1: Descripción del problema ##
+
+Lo primero es explorar brevemente los datos, se cargan las liberías `MicroDatosEs`, `data.table`, `plyr` y `dplyr`. 
+
+A continuación cargamos los datos, en este caso hemos escogido datos por comunidad autónoma para las CCAA ente 01 y 04. Para disponer de esos datos, tenemos que:
+
+1. Descargar [aquí](http://goo.gl/guhG1M) en "Personas y hogares" en el apartado "Fichero por comunidades autónomas" el bloque llamado "CCAA entre 01 y 04"
+2. Descomprimir el *.txt en ~/Documentos
+
+```{r,message=FALSE,collapse=TRUE}
+if (!(require("MicroDatosEs", character.only=T, quietly=T))) {
+  install.packages("MicroDatosEs")
+  library("MicroDatosEs", character.only=T)
+}
+if (!(require("data.table", character.only=T, quietly=T))) {
+  install.packages("data.table")
+  library("data.table", character.only=T)
+}
+if (!(require("plyr", character.only=T, quietly=T))) {
+  install.packages("plyr")
+  library("plyr", character.only=T)
+}
+if (!(require("dplyr", character.only=T, quietly=T))) {
+  install.packages("dplyr")
+  library("dplyr", character.only=T)
+}
+if (!(require("reshape2", character.only=T, quietly=T))) {
+  install.packages("reshape2")
+  library("reshape2", character.only=T)
+}
+
+PATH <- "~/Documentos"
+FILENAME <- "MicrodatosCP_NV_per_bloque1.txt"
+FULLPATH <- paste(PATH,FILENAME,sep="/")
+```
+
+Al cargar los datos obtenemos una descripción de las columnas que contiene el archivo:
+
+```{r,results='hide'}
+df <- censo2010(FULLPATH)
+```
+
+Tras echar un vistazo a las variables, vemos que tenemos los campos `edad`, `internet`... Como desarrollador web y de videojuegos aficionado me interesa el tema ya que puede ser un paso previo introductorio a un estudio de mercado para centrar el target de un producto digital para niños, por ejemplo: un videojuego. Así por ejemplo si por debajo de 15 años hay mucho niños que disponen de internet, podemos centrarnos en un producto final que deberá tener un lenguaje más cuidado etc. para poder obtener una clasificación PEGI para menores de 15 años.
+
+Por este motivo vamos a estudiar la relación entre los menores de edad y el uso de internet.
+
+## Paso 2: Preparación inicial ##
+
+Lo primero que hacemos es aplicar el machete, es decir quedarnos sólo con los campos que nos interesan estudiar.
+
+```{r}
+features <- c("cpro", "factor", "edad", "sexo", "escolar", "esreal", "nhijos", "internet")
+df <- as.data.frame(df[,features])
+#df <- head(df,n=100) # en este caso, para pruebas, usaremos solo los 100 primero registros.
+```
+
+Además nos interesa poco saber exactamente cuántas personas hay de una edad concreta, por eso el siguiente paso es establecer unas franjas de edad que son las que no interesan contabilizar.
+
+```{r}
+bins <- c(1,5,10,15,18)
+```
+
+## Paso 3: Dplyr ##
+
+A continuación aplicamos en dplyr las transformaciones necesarias, debemos ejecutar los siguientes pasos:
+
+1. Quedarnos sólo con los menores de 18 años
+2. Dividir la edad en rangos segun la variable `bins` antes calculada
+3. Agrupamos por segmento de edad y si usan o no internet (no interesa contar los miembros de cada uno de estos grupos)
+4. Añadimos una nueva variable, `number`
+5. Desagrupamos para realizar una nueva agrupacion
+6. agrupamos por los campos `internet`, `edad`, `edad_bin` y `number`
+
+```{r}
+  dplyr.df.target <- df %>%
+    filter(edad<18) %>%
+    mutate(edad_bin = cut2(edad,bins))
+  
+  dplyr.df.result <- dplyr.df.target %>%
+    group_by(internet, edad_bin) %>%
+    mutate(number=length(internet)) %>%
+    ungroup() %>%
+    group_by(internet,edad,edad_bin,number) %>%
+    summarize()
+```
+
+Por último se pide tabular los datos, en este caso usaremos el paquete `reshape2` en filas veremos si son usuario de internet o no y en columnas el rango de edades:
+
+```{r}
+dplyr.df.tabla <- dcast(dplyr.df.result, internet ~ edad_bin, fun.aggregate = unique, value.var="number", fill=0)
+dplyr.df.tabla
+```
+
+## Paso 4: Data.table ##
+
+Los pasos a realizar son realmente los mismos que en el apartado anterior, pero la sintaxis aunque más simple, es más dificil de entender, iremos paso a paso, lo primero es convertir el data.frame: `df` a data.table: `dt.df.base`, en los data.table la idea es que las queries las haces entre corchetes.
+
+Veamos un poco la idea tras la sintaxis: `DT[queries_rows, ,...][,queries_columns,...]` a la izquierda de la primera coma puedes hacer las queries por filas, y a la derecha las queries para las columnas, aunque combinar ambas a la vez puede dar problemas, por otro lado tienes una serie de campos con nombre como `keyby` o `with` que te permiten hacer queries por grupos o con distintos tipos de manipulación.
+
+Es notable en este paquete que los corchetes pueden concatenarse sucesivamente ya que tras aplicar las operaciones en los corchetes el resultado es a su vez un data.table.
+
+```{r}  
+  dt.df.base <- as.data.table(df)
+  
+  dt.df.target <- dt.df.base[edad<18,][,edad_bin := cut2(edad,bins)]
+  
+  dt.df.result <- dt.df.target[,number := length(edad),by=c("internet","edad_bin")] 
+  
+  dt.df.tabla <- dcast(dt.df.result, internet ~ edad_bin, fun.aggregate = unique, value.var="number", fill=0)
+  dt.df.tabla
+```
+
+## Paso 5: Conclusiones ##
+
+De este ejercicio se observa que dplyr tarda más que data.table y la sintaxis es mucho más extensa, lo que en principio parece un inconveniente.
+
+Sin embargo la sintaxis de dplyr es bastante similar a SQL al menos en el sentido de una interfaz declarativa que manipula datos tabulares (aunque la sintaxis no tiene que ver con SQL pero es bastante fácil encontrar paralelismos) lo que hace que tenga una curva de aprendizaje menor para gente familiarizada con SQL.
+
+La curva de aprendizaje de data.table tiene mayor pendiente al inicio, siendo más complicado de entender la filosfía que sigue para manipular los datos, sin embargo una vez se entienden esos conceptos es bastante más sencillo de escribir.
+
+Aún con esta dificultad inicial prefiero data.table a dplyr.
+
+<br/><br/>
+<h4>[Home](http://xavi783.github.io/u-tad-modulo7_1/)</h4>
+<br>

@@ -1,0 +1,9 @@
+Package: jserrano
+Type: Package
+Title: jserrano
+Version: 1.0
+Date: 2015-01-05
+Author: jserrano
+Maintainer: <xavi783@gmail.com>
+Description: test package building
+License: none

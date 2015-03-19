@@ -1,0 +1,130 @@
+---
+title: "Ejercicio1"
+author: "jserrano"
+date: "04/01/2015"
+output:
+  html_document:
+    toc: true
+---
+
+## Clases S4 y mapas (2 puntos) ##
+Obtén shapefiles de, p.e., provincias españolas (el INE los proporciona). Luego, obtén datos de algún tipo de
+estadística asociada a dichas entidades (población, tasa de desempleo, etc.). Con esos dos elementos, crea un
+SpatialPolygonsDataFrame y represéntalos gráficamente.
+
+Trata de hacerlo reproduciblemente (¿con R MarkDown?)
+
+## Paso 1: Preparando el workspace ##
+En este caso hemos decidido representar el IRPF por comunidad autónoma en un año determinado
+(anterior a 2010).
+
+Cargamos los paquetes y variables necesarias para el ejercicio, en este caso son 3 paquetes:
+
+*   rgdal: para manipular shapefiles
+*   pxR: para cargar datos en ficheros PC-Axis que es el formato que utiliza el INE
+*   dplyr: para manipular los data.frames con los datos
+
+Además utilizamos una variable `YEAR` con el año del que se desean representar los datos (se llegó 
+a la conclusión de que esta variable era necesaria tras analizar los datos y comprobar que estaban
+agrupados por año).
+
+También utilizaremos una variable `PATH` que contrndrá la ruta donde descomprimiremos los shapefiles
+
+```{r}
+if (!(require("rgdal", character.only=T, quietly=T))) {
+  install.packages("rgdal")
+  library("rgdal", character.only=T)
+}
+if (!(require("pxR", character.only=T, quietly=T))) {
+  install.packages("pxR")
+  library("pxR", character.only=T)
+}
+if (!(require("dplyr", character.only=T, quietly=T))) {
+  install.packages("dplyr")
+  library("dplyr", character.only=T)
+}
+
+YEAR <- 2010
+PATH <- "/home/x/Documentos/cursos/UTAD/u-tad-modulo7_1/ccaa"
+```
+
+## Paso 2: Cargar los mapas y la información del IRPF ##
+Lo primero es descargar los shapefiles del IGN y descomprimirlos en disco, los shapefiles utilizados
+se pueden descargar en el siguiente [link](http://centrodedescargas.cnig.es/CentroDescargas/equipamiento/lineas_limite.zip) se extraerán en carpeta y se modificará la variable PATH, apuntando a la carpeta donde se encuentran los ficheros 
+extraidos
+
+Para obtener estos datos se ha utilizado la siguiente [web](http://juanchosierrar.blogspot.com.es/2011/09/links-descarga-ficheros-gis-gratis.html).
+
+Hay que indicar que se ha realizado el ejercicio en windows y linux y se ha observado que en función del SO el driver OGR cambia
+y por tanto los valores que hay que dar a `dsn` y `layer` también.
+
+```{r}
+layer <- "recintos_autonomicas_inspire_peninbal_etrs89"
+if (Sys.info()['sysname']=="Linux"){
+  dsn <- paste(PATH,"/recintos_autonomicas_inspire_peninbal_etrs89",sep="")
+}
+if (Sys.info()['sysname']=="Windows"){
+  dsn <- PATH  
+}
+maps <- readOGR(dsn,layer,encoding="latin1")
+maps.data <- maps@data
+
+# estadisticas del IRPF: http://www.ine.es/jaxi/menu.do?type=pcaxis&path=/t45/p062/a04/&file=pcaxis
+values <- c('http://www.ine.es/pcaxisdl//t45/p062/a04/l0/ir40001.px',
+            'http://www.ine.es/pcaxisdl//t45/p062/a04/l0/ir40002.px',
+            'http://www.ine.es/pcaxisdl//t45/p062/a04/l0/ir40003.px')
+concepts <- c('IRPF_concepto_periodo','IRPF_tipo_concepto_periodo','IRPF_ccaa')
+filenames <- data.frame(concepts,values)
+
+data <- read.px(filename=as.character(filenames[3,2]),encoding="latin1")
+info.data <- data$DATA$value[data$DATA$value$periodo==YEAR & data$DATA$value$tipo=='TOTAL (1)',]
+```
+
+## Paso 3: combinar data.frames ##
+
+Tras esto tenemos 2 data.frames con la información relevante: `maps.data` e `info.data` El siguiente paso es combinar ambos data frames, pero observamos un problema, en función de la codificación de los ficheros utilizado (Shapefile y PC-Axis) los nombres de las CCAA cambian, por tanto debemos normalizar en este sentido los nombres, para tener un campoque codifique la CCAA y secomporte igual en ambos data.frames, para ello hemos creado una función que codifica los nombres de las CCAA a un numerousando expresiones regulares paraevitar caracteres que puedan dar problemas de codificación
+
+```{r}
+ccaa.getid <- function(comunidades){
+  ccaa.re <- c('Andaluc.a', 'Arag.n', 'Asturias', 'Balear.+', 'Canarias', 'Cantabria', 'Castilla.*Le.n',
+               'Castilla.*Mancha', 'Catalu.a', 'Valencia.', 'Extremadura', 'Galicia', 'Madrid',
+               'Murcia', 'Navarra', 'Pa.s.Vasco', 'Rioja', 'Ceuta', 'Melilla')
+  unlist(lapply(comunidades,
+         function(comunidad){
+            result <- c(1:length(ccaa.re))[unlist(
+                      lapply(ccaa.re,
+                        function(x) grepl(x, as.character(comunidad), perl=TRUE))
+                      )]
+            if(length(result)==0){
+             return(NA)
+            }else{
+             return(result)
+            }
+          }))
+}
+```
+
+A continuacion modificamos ambos data.frames y el campo `@data` de la estructura `SpatialPolygonsDataFrame` que es maps, y les añadimos el ID de la comunidad autónoma con `dplyr`, combinamos ambos data.frames y se lo asignamos al campo `maps@data`
+
+```{r}
+info.data <- info.data %>%
+              mutate(ccaa.id=ccaa.getid(info.data$CCAA))
+maps.data <- maps.data %>%         
+              mutate(ccaa.id=ccaa.getid(maps.data$NAMEUNIT))
+maps@data <- join(maps.data, info.data, by=c("ccaa.id" = "ccaa.id"))
+```
+
+## Paso 4: dibujar el mapa ##
+
+Ya sólo queda preparar las variables para construir el mapa, y representarlo, para ello se ha usado la función spplot que ya está preparada para representar shapefiles.
+
+```{r}
+colores <- rainbow(length(maps@plotOrder),start=0, end=4/6)
+title <- list(label=paste("IRPF por CCAA",as.character(YEAR),sep=" - "),cex=1)
+plotMap <- spplot(maps, zcol="value",col.regions=colores[seq(length(colores),1,-1)], main=title)
+```
+El resultado es:
+
+```{r, echo=FALSE}
+plotMap
+```

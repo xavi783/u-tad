@@ -1,0 +1,116 @@
+---
+title: "Ejercicio5"
+author: "jserrano"
+date: "04/01/2015"
+output:
+  html_document:
+    toc: true
+---
+
+## RHadoop (2 puntos) ##
+Sube un subconjunto de datos del censo del ejercicio anterior (¿100k líneas?) a Hadoop y haz una tabulación de variables de tu interés del censo usando mapreduce.
+
+## Paso 1: Preparando el Entorno ##
+
+Lo primero es preparar RHadoop, para ello vamos a seguir los siguientes pasos:
+
+  **Descargar paquetes de RHadoop de:**
+  
+  	https://github.com/RevolutionAnalytics/RHadoop/wiki
+  
+  **Instalar rJava:**
+  
+  	1. Editar /usr/lib/R/etc/javaconf
+  	2. Añadir path: ${JAVA_HOME="/usr/local/java/jdk1.7.0_71"}
+  	3. Ejecutar: $ sudo R CMD javareconf
+    4. Instalar paquete rJava en R
+  
+  **Arrancar Hadoop:**
+  
+    $ hdfs namenode -format
+  	$ $HADOOP_HOME/sbin/start-dfs.sh
+  	$ $HADOOP_HOME/sbin/start-yarn.sh
+  
+  **Subir Datos a Hadoop:**
+  
+  	hadoop fs -mkdir /user
+  	hadoop fs -mkdir /user/x
+  	hadoop fs -mkdir /user/x/data
+  	hadoop fs -copyFromLocal ~/Documentos/datos_censo2011.tsv /user/x/data
+  	hadoop fs -ls /user/x/data
+    
+## Paso 2: Iniciar sistema en RStudio ##
+
+Para esto debemos cargar las librerias e iniciar las variables de sistema que enlazaran RStudio con Hadoop, para ello:
+
+```{r}
+library(rmr2)
+library(data.table)
+library(reshape2)
+
+Sys.setenv("HADOOP_PREFIX"="/usr/local/hadoop-2.6.0")
+Sys.setenv("HADOOP_CMD"="/usr/local/hadoop-2.6.0/bin/hadoop")
+Sys.setenv("HADOOP_STREAMING"="/usr/local/hadoop-2.6.0/share/hadoop/tools/lib/hadoop-streaming-2.6.0.jar")
+```
+
+Antes de llevar a cabo otros calculos debemos determinar también el fichero a cargar y el formato de entrada que tiene:
+
+```{r}
+fnam <- "/user/x/data/datos_censo2011.tsv"           # file name
+fif  <- make.input.format("csv", sep = "\t")     # file format
+```
+
+Después de esto ya procedemos a programar las funciones map y reduce.
+  
+## Paso 3: Map & Reduce ##
+
+A continuación programamos la función map, esta función debe recoger los campos 8 y 64 de la línea de entrada, convertir el campo 8 (edad del sujeto) al rango correspondiente, para ello usamos la función `cut` con los bins respectivos `bins <- c(1,5,10,15,18)` y a continuación creamos una key con la transformación del campo8 y el campo 64 (si el sujeto posee o no internet)
+
+```{r}
+my.map <- function(k,v){
+  bins <- c(1,5,10,15,18)
+  k2 <-  which(cut(v$V8, bins)==levels(cut(v$V8, bins)))
+  keyval(paste(v$V64, k2, sep=""), list(v$V64, cut(v$V8, bins)))
+}
+```
+
+Tras esto creamos la función map, que simplemente debe contar las apariciones de cada key y asignar a cada key, el valor de su numero de apariciones, manteniendo las columnas `edad_bin` (el grupo de edad del sujeto) y `internet` (si el sujeto posee o no internet).
+
+```{r}
+my.reduce <- function(k,v){ 
+  tmp <- as.data.table(do.call(rbind, v))
+  tmp <- setnames(tmp,names(tmp),c("internet","edad_bin"))
+  keyval(k, list(tmp$internet[1], tmp$edad_bin[1], dim(tmp)[1])) #:=number
+}
+```
+
+## Paso 4: Lanzamos los trabajos ##
+
+Con las funciones anteriores, el fichero y el formato de entrada, lanzamos el trabajo (omitimos la información de salida ya que es muy verbosa)
+
+```{r}
+res <- from.dfs(mapreduce(
+  input = fnam,
+  input.format = fif,
+  map = my.map
+  reduce = my.reduce ))
+```
+
+## Paso 5: Tabular resultados ##
+
+Lo primero es convertir los datos de salida a un data frame:
+
+```{r}
+df <- data.frame(res$val, colnames=c("internet","edad_bin","number"))
+```
+
+Y por último tabulamos los resultados:
+
+```{r}
+df.tabla <- dcast(df, internet ~ edad_bin, fun.aggregate = unique, value.var="number", fill=0)
+df.tabla
+```
+
+<br/><br/>
+<h4>[Home](http://xavi783.github.io/u-tad-modulo7_1/)</h4>
+<br>

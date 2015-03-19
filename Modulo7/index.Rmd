@@ -1,0 +1,15 @@
+---
+title: "Ejercicios UTAD: Master en Data Science"
+author: "Javier Serrano"
+output: html_document
+---
+
+***
+***
+
+## Modulo 7, Parte 1
+
+---
+Ejercicios:
+
+* [Ejercicio 1](http://xavi783.github.io/u-tad-modulo7_1/html/ejercicio1.html)

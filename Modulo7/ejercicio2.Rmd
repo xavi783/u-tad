@@ -1,0 +1,134 @@
+---
+title: "ejercicio2"
+author: "jserrano"
+date: "04/01/2015"
+output:
+  html_document:
+    toc: true
+---
+
+## JSON & XML ##
+Busca un proveedor de datos via API que te interese. Descarga unos datos, procésalos y crea una pequeña
+historia a su derredor. Trata de que la obtención de los datos, etc. tenga su dificultad: se valorarán
+
+tanto el tratamiento de los datos como su interés o motivación.
+
+Hazlo reproduciblemente (¿con R Markdown?)
+
+## Paso 1: Descripción del problema ##
+
+Vamos a tomar los datos del IPC anuales y cruzarlos con los del IBEX35 para comprobar
+si una acelaeración o deceleración en el IPC nos da como resultado un año alcist o bajista en
+el IBEX.
+
+Primero buscamos un proveedor de datos, en este caso usaremos [Quandl](https://www.quandl.com/),
+este proveedor de datos nos ofrece la posibilidad de bajar disintos assets en formato json, para
+ello basta con buscar los datos y utilizar el API JSON que ofrecen.
+
+Despues de haber analizado unos cuantos assets, hemos creado una funci´on para manipular los archivos
+JSON descargados y convertirlos a data.frames. Antes de eso prepararemos el workspace
+
+```{r}
+if (!(require("rjson", character.only=T, quietly=T))) {
+  install.packages("rjson")
+  library("rjson", character.only=T)
+}
+if (!(require("dplyr", character.only=T, quietly=T))) {
+  install.packages("dplyr")
+  library("dplyr", character.only=T)
+}
+if (!(require("lubridate", character.only=T, quietly=T))) {
+  install.packages("lubridate")
+  library("lubridate", character.only=T)
+}
+
+json2frame <- function(x.json){
+  data.raw <- unlist(x.json$data)
+  ncols  <- length(x.json$column_names)
+  series <- lapply(c(1:ncols), function(x) seq(x,length(data.raw),ncols))
+  
+  x.json$data <- c()
+  x.json$data <- lapply(c(1:ncols), function(x) cbind(x.json$data, data.raw[series[[x]]]))
+  x.json$data <-  as.data.frame(x.json$data)
+  colnames(x.json$data) <- x.json$column_names
+  x.json
+}
+```
+
+## Paso 2: Cargar los datos ##
+
+Procedemos a bajarnos los datos para el IPC de España (icp en inglés) y para el IBEX35:
+
+```{r}
+cpi.json <- fromJSON(readLines("http://www.quandl.com/api/v1/datasets/ODA/ESP_PCPIE.json"))
+cpi.json <- json2frame(cpi.json)
+head(cpi.json$data,n=10)
+
+ibex35.json <- fromJSON(readLines("http://www.quandl.com/api/v1/datasets/YAHOO/INDEX_IBEX.json"))
+ibex35.json <- json2frame(ibex35.json)
+head(ibex35.json$data,n=10)
+```
+
+Lo primero que notamos es que el IBEX35 viene en frecuencia diaria y el IPC en frecuencia anual, así que
+tendremos que tratar los datos para transofmrar el IPC en frecuencia diaria. 
+
+Pero lo que nos interesa no es el IPC como tal sino las segundas diferencias (la aceleración del IPC) en
+este caso lo más fácil es calcular las diferencias en frecuencia anual y luego convertir todo el data.frame
+a frecuencia diaria para poder combinarlo con el IBEX35 en frecuencia diaria.
+
+## Paso 3: Transformaciones a los datos ##
+
+Por un lado añadimos una nueva columna al IBEX35 (el año de cotizacion) y la misma al IPC, además formateamos
+la columna `Value` del IPC para tenerla en formato numérico y poder calcular las diferencias.
+
+```{r}
+ibex35.json$data <- ibex35.json$data %>%
+  mutate(year=year(Date))
+
+cpi.json$data <- cpi.json$data %>%
+  mutate(year=year(Date)) %>%
+  mutate(Value = unlist(lapply(lapply(Value, as.character),as.numeric))) %>%
+  mutate(Value_diff = c(0, diff(c(0,diff(Value)))))
+```
+
+## Paso 4: Combinamos los datos ##
+
+A continuación combinamos ambos data.frame para obtener un data.frame único del que calcularemos los rendimientos
+del Close en frecuencia anual y nos quedaremos solo con un registro por año que contenga : la variación anual del
+IBEX35, la aceleración anual del IPC y la fecha final del año
+
+```{r}
+combination <- left_join(ibex35.json$data, cpi.json$data, by=c("year" = "year"))
+combination <- combination[!colnames(combination) %in% c("Date.y")]
+colnames(combination)[2] <- "Date"
+head(combination)
+
+tabla <- combination %>%
+          group_by(year) %>%
+          mutate(close_ini = - unlist(lapply(lapply(Close, as.character),as.numeric)[length(Close)]) +
+                   unlist(lapply(lapply(Close, as.character),as.numeric)[1])) %>%
+          select(year,Value_diff,close_ini,Date) %>% top_n(n=1) %>%
+          ungroup() %>% select(Date,Value_diff,close_ini)
+tabla<- as.data.frame(tabla)
+```
+
+## Paso 5: Resultado final ##
+
+Si queremos establecer una relacción entre la aceleración o deceleración del IPC y el resultado positivo o
+negativo del IBEX, nos bastaría con analizar (al menos en un primer momento), el signo deambos conceptos.
+
+En este caso contamos el número de veces que el signo de la aceleración del IPC coincide con el del beneficio
+del IBEX y lo calulamos en % sobre el numero total de años estudiados.
+
+Para poder establecer una relación según este estadístico, debería estar en torno a valores extremos 0% o 100%.
+Veamos su valor:
+
+```{r}
+sprintf("%.2f%%",sum(sign(tabla$Value_diff)==sign(tabla$close_ini))/nrow(tabla)*100)
+```
+
+En este caso, con un valor en torno al 40% no podemos decir que exista una relación aparente entre estos 
+conceptos.
+<br/><br/>
+<h4>[Home](http://xavi783.github.io/u-tad-modulo7_1/)</h4>
+<br>

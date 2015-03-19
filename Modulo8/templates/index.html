@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+
+<html lang="en">
+
+    <head>
+        <meta charset="utf-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1">
+        <meta name="description" content="">
+        <meta name="author" content="">
+
+        <title>Ejercicio D3.js</title>
+
+        <!-- Bootstrap core CSS -->
+        <link rel="stylesheet" type="text/css" href="{{static_url('stylesheets/styles.css')}}">
+    </head>
+
+    <body>
+
+    <main class="content" style="width:80%;">
+        <div class="container" style="padding-left:5rem">
+            <div class="v_container">
+                <h1>Ejercicio de D3.js</h1>
+                <h4 class="quote">Por: Javier Serrano</h4>
+                <br>
+                <br>
+            </div>
+            <div class="h_container">
+                <div style="width:60%;text-align:justify;padding-right:2em;">                
+                    <p>
+                    En este ejercicio veremos una cartera con 10 activos diferentes del NYSE, para decidir entre cual de ellos invertir.
+                    Se muestra la evolucion de los precios, junto con la correlacion entre los activos. Los activos de los que se desean formar la cartera se ven en la 
+                    tabla de la derecha.
+                    </p>
+                    <p>Se muestran los siguientes datos:</p>
+                    <ul>
+                        <li>Precios historicos de los 10 activos y el liquidativo de la cartera EOF</li>
+                        <li>Correlacion entre los activos de la cartera</li>
+                    </ul>
+                    <p>Con todo esto el objetivo del presente trabajo es decidir cuando invertir segun esta cartera</p>
+                </div>
+                <div class="v_container" style="width:40%;padding-left: 5em ! important;">
+                    <div>{% include 'layout/tabla1.html' %}</div>
+                    <div style="font-size:0.8rem;padding-top:1rem;">Datos disponibles en <a href="https://es.finance.yahoo.com/">Yahoo Finance</a></div>
+                </div>
+            </div>
+
+            <!-- GRAFICOS CON LOS LIQUIDATIVOS -->
+            <article class="v_container">
+                <header class="v_container">
+                    <h3>Sotck y Liquidativo del portfolio</h3>
+                    <br>
+                </header>
+                <div class="h_container">
+                    <!-- GRAFICOS CON LOS LIQUIDATIVOS -->
+                    <div id="stock-chart" style="width:100%;text-align:justify;padding-right:2em;"></div>
+                    <!-- CHECKBOXES CON SERIES -->
+                    <div class="v_container" style="width:30%;">
+                        <form id="select-stocks" action="" class="h_container">
+                            <div class="v_container" style="width:40%;">
+                                <div style="border-radius: 4px; background-color: white; margin: 0.1em 1em 0.1em 0px; padding-left:1rem;">
+                                    <input type="checkbox" name="AAPL" checked="True"></input><label for="s1" style="padding-left: 1em; padding-top: 0.3em;">AAPL</label>
+                                </div>
+                                <div style="border-radius: 4px; background-color: white; margin: 0.1em 1em 0.1em 0px; padding-left:1rem;">
+                                    <input type="checkbox" name="XOM" checked="True"></input><label for="s2" style="padding-left: 1em; padding-top: 0.3em;">XOM</label>
+                                </div>
+                                <div style="border-radius: 4px; background-color: white; margin: 0.1em 1em 0.1em 0px; padding-left:1rem;">
+                                    <input type="checkbox" name="MSFT" checked="True"></input><label for="s3" style="padding-left: 1em; padding-top: 0.3em;">MSFT</label>
+                                </div>
+                                <div style="border-radius: 4px; background-color: white; margin: 0.1em 1em 0.1em 0px; padding-left:1rem;">
+                                    <input type="checkbox" name="JNJ" checked="True"></input><label for="s4" style="padding-left: 1em; padding-top: 0.3em;">JNJ</label>
+                                </div>
+                                <div style="border-radius: 4px; background-color: white; margin: 0.1em 1em 0.1em 0px; padding-left:1rem;">
+                                    <input type="checkbox" name="BRK" checked="True"></input><label for="s5" style="padding-left: 1em; padding-top: 0.3em;">BRK.B</label>
+                                </div>
+                            </div>
+                            <div class="v_container" style="width:40%;">
+                                <div style="border-radius: 4px; background-color: white; margin: 0.1em 1em 0.1em 0px; padding-left:1rem;">
+                                    <input type="checkbox" name="WFC" checked="True"></input><label for="s6" style="padding-left: 1em; padding-top: 0.3em;">WFC</label>
+                                </div>
+                                <div style="border-radius: 4px; background-color: white; margin: 0.1em 1em 0.1em 0px; padding-left:1rem;">
+                                    <input type="checkbox" name="GE" checked="True"></input><label for="s7" style="padding-left: 1em; padding-top: 0.3em;">GE</label>
+                                </div>
+                                <div style="border-radius: 4px; background-color: white; margin: 0.1em 1em 0.1em 0px; padding-left:1rem;">
+                                    <input type="checkbox" name="PG" checked="True"></input><label for="s8" style="padding-left: 1em; padding-top: 0.3em;">PG</label>
+                                </div>
+                                <div style="border-radius: 4px; background-color: white; margin: 0.1em 1em 0.1em 0px; padding-left:1rem;">
+                                    <input type="checkbox" name="JPM" checked="True"></input><label for="s9" style="padding-left: 1em; padding-top: 0.3em;">JPM</label>
+                                </div>
+                                <div style="border-radius: 4px; background-color: white; margin: 0.1em 1em 0.1em 0px; padding-left:1rem;">
+                                    <input type="checkbox" name="PFE" checked="True"></input><label for="s10" style="padding-left: 1em; padding-top: 0.3em;">PFE</label>
+                                </div>
+                            </div>
+                        </form>
+                        <div style="border-radius: 4px; background-color: white; margin: 0.5em 1em 0.1em 0px; padding-left:1rem; width:76%;">
+                            <input type="checkbox" name="check-all" checked="True"></input><label for="s10" style="padding-left: 1em; padding-top: 0.3em;">Turn All</label>
+                        </div>
+                    </div>
+                </div>
+            </article>
+            <br><br>
+
+            <!-- GRAFICOS DE CORRELACION -->
+            <article class="h_container" style="width:100%;">
+                <header class="v_container" style="width:125%;">
+                    <h3>Correlacion del portfolio</h3>
+                    <br>
+                    <p>
+                    Mostramos la correlación total en el último mes con un diagrama de cuerdas, el arco de cada activo muestra su "peso" total en la matriz de correlaciones, pasando el ratón por 
+                    encima de cada activo vemos las cuerdas que lo unen con los demás, siendo la correlación, la anchura de dichas cuerdas.
+                    </p>
+                    <p>Se puede seleccionar la fecha final del periodo del que se desea calcularla correlación, mostrándose la correlación de los rendimientos porcentuales de los archivos en el último mes</p>
+                </header>
+                <div class="v_container" style="width:50%;align=centered;">
+                    <div class="v_container" style="width:100%;margin-bottom:2em;padding-left:25%">
+                        <input id="date-picker" type="date" style="width:50%;">
+                    </div>
+                    <div id="correlation-plot"></div>
+                </div>
+            </article>
+
+
+        </div>
+
+    </main>
+
+    <script type="text/javascript" data-main="{{static_url('javascripts/main.js')}}" src="https://cdnjs.cloudflare.com/ajax/libs/require.js/2.1.16/require.min.js"></script>
+    </body>
+
+</html>

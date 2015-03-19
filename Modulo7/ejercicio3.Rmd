@@ -1,0 +1,111 @@
+---
+title: "Ejercicio3"
+author: "jserrano"
+date: "04/01/2015"
+output: html_document
+---
+
+## Web scraping, texto y fechas ##
+
+Descarga información bursátil de [http://goo.gl/yD2Bwb] y crea un data.frame a partir de él con la misma
+información que en la tabla que aparece en la página. Convierte las columnas numéricas a número, etc., las
+fechas a fecha, etc.
+
+Ten en cuenta que la columna hora puede tener dos tipos de información: la hora durante las horas de
+operación de los mercados y el día en formato dd/mm/aaaa fuera de mercado. Que tu código tenga en cuenta
+esa circunstancia.
+
+Alternativamente, si encuentras algunos datos de tu interés que te interese procesar y tengan un nivel de
+dificulad similar al anterior, úsalos en lugar de los propuestos.
+
+El código que envíes tiene que ser capaz de crear la tabla a la hora en que lo ejecute.
+
+## Paso 1: Preparamos el workspace ##
+
+Utilizaremos los paquetes `data.table` y `XML` para el proceso y la captura de datos respectivamente
+
+```{r}
+if (!(require("data.table", character.only=T, quietly=T))) {
+  install.packages("data.table")
+  library("data.table", character.only=T)
+}
+if (!(require("XML", character.only=T, quietly=T))) {
+  install.packages("XML")
+  library("XML", character.only=T)
+}
+if (!(require("stringr", character.only=T, quietly=T))) {
+  install.packages("stringr")
+  library("stringr", character.only=T)
+}
+```
+
+## Paso 2: Preparar datos ##
+
+Lo primero es echar un vistazo a los datos que queremos capturar, para ello en Chrome o Firefox abriremos las herramientas de desarrollador pulsando `F12` y comprobaremos el (DOM)[http://es.wikipedia.org/wiki/Document_Object_Model] para identificar los elementos que queremos descargar, alternativamente podemos pulsar el botón derecho del raton y click en `Inspeccionar Elemento`
+sobre la tabla en concreto a capturar.
+
+En este apartado cargaremos los datos usando `readHTMLtable` que nos permite capturar directamente un elemento HTML
+`<table>...<\table>`, ya hemos comprobado en el código fuente de la web que el elemnto que deseamos capturar es de este tipo.
+
+Existe un pequeño problema con la codificación de los nombres de las columnas, se ha intentado usar `readHTMLtable` con diferentes codificaciones (`latin1`,`ISO-8859-1`,etc.), pero los errores se mantenían, por lo que finalmente se ha decido cambiar completamente los nombres de las columnas.
+
+```{r}
+tabla <- readHTMLTable("http://www.invertia.com/mercados/bolsa/indices/ibex-35/acciones-ib011ibex35/1a",header=TRUE,encoding="latin1")[[2]]
+
+colnames(tabla) <- c('TKR','Last','Dif','Dif%','_','Max','Min','Volume','Capital','Rt/Div','PER','Hour')
+tabla <- tabla[colnames(tabla)!="_"]
+```
+
+## Paso 3: Tratar los formatos de las columnas ##
+
+Después de echar un vistazo a los datos, comprobamos que todos los datos son de tipo `character`,
+además utilizan  `,` para decimales y `.` para millares, diferente a los caracteres estándar en R,
+por tanto, debemos tratar las columnas para eliminar los `.` y reemplazar las `,` por `.`. Además
+en caso de que en un campo tengamos símbolos de ambos tipos, se deben sustiruir en el órden
+indicado antes.
+
+Para llevar esto a cabo agrupamos las columnas según el tipo de transformación a aplicar y mapeamos
+cada columna a una función de transformación diferentes, después aplicamos cada transformación a cada grupo,
+columna a columna, como se ve a continuación:
+
+```{r}
+conv <- c( function(x) as.numeric(str_replace_all(x,",",".")),
+           function(x) as.numeric(str_replace_all(x,"\\.","")),
+           function(x) as.numeric(str_replace_all(str_replace_all(x,"%",""),",",".")),
+           function(x) {      
+             as.Fecha <- function(x){x = as.POSIXlt(x,format="%Y-%m-%d")}
+             as.Hora <- function(x){x = as.POSIXct(x,format="%H:%M")}              
+             if (any(grepl("\\d{1,2}:\\d{1,2}",x,perl=TRUE))) {
+               as.Fecha(x[grepl("\\d{1,2}/\\d{1,2}/\\d{4}",x,perl=TRUE)])
+             }
+             if (any(grepl("\\d{1,2}:\\d{1,2}",x,perl=TRUE))) {
+               as.Hora(x[grepl("\\d{1,2}/\\d{1,2}/\\d{4}",x,perl=TRUE)])
+             }
+             x
+           })
+cols<-c()
+cols$numeric <- c("Last","Dif","Dif%","Max","Min","Capital","PER")
+cols$millions<-c("Volume")
+cols$percent <- c("Rt/Div")
+cols$hour <- c("Hour")
+
+for(i in c(1:length(names(cols)))){
+  for(x in cols[[i]]){
+    tabla[x]<-lapply(tabla[x],conv[[i]])[[1]]
+  }
+}
+```
+
+Hay que tener cuidado con el campo Hora porque su comportamiento varía. Si el mercado está cerrado entonces
+muestra la fecha de la última cotización en formato `d/m/Y`, mientras que si el mercado está abierto, muestra la hora, en formato `H:M`.
+
+Para distinguir este comportamiento utilizamos expresiones regulares, y le damos un tratamiento diferente a los
+campos según sigan un patrón u otro.
+
+## Paso 4: Obtener los resultados ##
+
+El resultado es:
+
+```{r, echo=FALSE}
+head(tabla)
+```

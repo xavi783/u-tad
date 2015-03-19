@@ -1,0 +1,101 @@
+# # Introducción
+# 
+# El IBEX35 se puede repesentar en un espacio de 35 dimensiones dadas por cada uno de los componenetes del mismo. De esta forma si 
+# podemos predecir el comportamiento de sus componentes seremos capaces de predecir el movimiento del índice, esto es útil por
+# ejemplo para invertir en el índice.
+# 
+# La idea de este trabajo es intentar reducir las cantidad de componentes en las que se puede representar el IBEX, con el objetivo de predecir mejor cada una de las nuevas componentes resultantes y así poder invertir mejor.
+# 
+# # Cargar y procesar los datos
+# 
+# Lo primero es cargar la tabla de composición del IBEX35 en 2015 (`ibex35`). Además para realizar el análisis de componenetes necesitaremos los rendimientos de los comoponentes del índice (`ibexC_ret`)
+
+source("http://bioconductor.org/biocLite.R")
+biocLite("RDRToolbox")
+
+library(ggplot2)
+library(reshape2)
+library(RDRToolbox)
+library(gridExtra)
+
+ibex35 <- read.csv('http://xavi783.github.io/data/ibex35/ibex35.csv')
+ibexC_ret <- read.csv('http://xavi783.github.io/data/ibex35/ibex35_returnsCorrected.csv')
+
+n = c((dim(ibexC_ret)[1]-500):(dim(ibexC_ret)[1]-1))
+data <- ibexC_ret[n,c(3:37)]
+
+# # Análisis de PCA
+# 
+# ### 1: Cálculo de PCA
+# 
+# Escogemos que no escalen los datos (opcion por defecto), ya que al aplicarlo sobre los rendimientos en un gran número de días si podemos admitir una distribución normal según todos los estudios publicados.
+
+x <- prcomp(data)
+
+# ### 2: Número significativo de componentes principales
+# 
+# Utilizando el criterio del codo, vemos que la primera componente resulta muy significativa y que a partir de 4 componenetes no tiene sentido buscar más
+
+x.dev <- data.frame(dev=x$sdev,pc=c(1:length(x$sdev)))
+ggplot(x.dev, aes(x=pc,y=dev))+geom_line()+scale_x_continuous(breaks=x.dev$pc)
+
+# ### 3: Matriz de rotación
+# 
+# Dibujamos la matriz de rotación frente a las 2 primeras componentes que representa
+# cada componenete del índice en las nuevas coordenadas
+
+ggplot(as.data.frame(x$rotation), aes(x=PC1,y=PC2,color=ibex35$sector,size=50))+geom_point()
+
+# Se aprecia que existe una dirección de máxima variabilidad representada por la componente 1. Además se observa una ligera separación por sectores, así el sector Energía se encuentra agrupado a la derecha de los demás. Por otro lado aunque con mayor variabilidad en la componente 1, también se aprecia que los activos de sector financiero también se agrupan bien, etc.
+# 
+# ### 4: Componenetes principales
+# 
+# A continuación vamos a representar el valor de las componenetes principales por día.
+
+dates <- data.frame(dates=as.Date(ibexC_ret[n,2]))
+x.melted <- melt(cbind(dates,x$x),id='dates')
+ggplot(x.melted, aes(x=dates, y=value, group=variable, color=variable)) + 
+  geom_line() + 
+  theme(legend.position="best")
+
+# Apreciamos que la amplitud de la serie conforme vamos representando más componentes disminuye, lógico, ya que la varianza explicada por las sucesivas componentes va disminuyendo.
+# 
+# Por otro lado vemos que la amplitud de la primera componenete (naranja) queda muy lejos de todas las demás, cómo se aprecia en la gráfica [1](#numero-significativo-de-componentes-principales)
+# 
+# # Análisis de Isomap
+# 
+# A continuación realizaremos el mismo análisis pero con Isomap, con el mismo objetivo
+# 
+# ### 1: Cálculo de Isomap
+# 
+# Aplicamos un Isomap en 2 dimensiones, utilizando 5 vecinos cercanos para calcular la variante.
+
+iso <- Isomap(data=t(data), dims=1:10, k=5,  plotResiduals = TRUE)
+
+# Dibujamos también los residuos, buscando el criterio del codo, vemos que lo ideal es entre 2 y 4 dimensiones, también vemos que aquí la reducción es algo menos eficiente que en PCA, ya que el codo podemos decir que se encuentra más atrás (la pendiente de los residuos presenta menores diferencias).
+
+ibex35_iso <- as.data.frame(iso$dim4)
+
+# ### 2: Clasificación
+# 
+# Dibujamos la matriz de rotación frente a las 2 primeras componentes que representa
+# cada componenete del índice en las nuevas coordenadas
+
+clus<-kmeans(ibex35_iso, 5, nstart = 1)
+ibex35_iso$cluster<-clus$cluster
+ibex35_iso$Peso<-ibex35$Peso*200+20
+
+# Se aprecia que los activos, al igual que con PCA, que el sector financiero también se agrupan bien, vemos de hecho que la mayoría de los activos de este grupo se sitúan en el cluster número 3. También se aprecian buenas agrupaciones en el sector energía y construcción representados por los clúster  2 y 4 respectivamente.
+# 
+# ### 4: Componenetes principales
+# 
+# A continuación vamos a representar el valor de las componenetes principales 1 frente a la 2.
+
+p <- ggplot(ibex35_iso, aes(x=V1,y=V2,size=Peso)) + 
+  geom_point(aes(color=ibex35$sector)) +
+  geom_point(shape = 1,colour = "black") +
+  scale_size_continuous(range = c(4,12)) +
+  stat_ellipse(geom = "polygon", alpha = 1/2, aes(fill = factor(cluster)))  +
+  annotate("text",ibex35_iso$V1,ibex35_iso$V2,label=ibex35$Ticker,size=3) + 
+  labs(title = "Relaciones entre compañias")
+p
