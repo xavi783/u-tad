@@ -42,11 +42,24 @@ ax.set_xticklabels([retext(x.get_text(),replDict) for x in ax.get_xticklabels()]
 plt.setp(ax.get_xticklabels(),rotation=30)
 fig.suptitle('% of NaNs')
 fig.subplots_adjust(.055,.16,.97,.93)
-ticks2perc(ax,0,100,0)
+ticks2perc(ax,1,100,0)
 
-# A continuación vamos a probar la imputación de NumberOfDependents, para eso
-# vamos a muestrear el dataframe en función de forma estratificada en función del
-# NumberOfDependents conocidos.
+# Dado que la salida es una variable booleana, comprobaremos como se distribuyen
+#  los NaN de #Dependants en cada clase
+gg = pd.DataFrame({k:nnans((traininig[(traininig[var_groups['out']]==k).values])) for k in [0,1]})
+ax = gg.plot(kind='bar',figsize=(10,6))
+fig = ax.get_figure()
+ax.set_xticklabels([retext(x.get_text(),replDict) for x in ax.get_xticklabels()],fontsize=10)
+plt.setp(ax.get_xticklabels(),rotation=30)
+ticks2perc(ax,1,100,0)
+fig.suptitle('% of NaNs in Each Output Category')
+fig.subplots_adjust(.055,.16,.97,.93)
+
+# Apreciamos que se distribuyen de manera muy similar, así que en un primer
+# momento no los tendremos encuenta para construir el modelo, eliminando los
+# clientes que presenten un NaN aquí, pero en todo caso, de tenerlos en cuenta
+# realizaremos un muestreo estratificado para imputar los NaNs en #Dependants 
+
 
 
 
