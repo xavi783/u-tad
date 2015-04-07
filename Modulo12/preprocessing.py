@@ -15,7 +15,7 @@ from variables.variables import VarRepl
 
 ROOT = '/home/x/Documentos/'
 if any(re.findall('^[wW]in.+',os.environ['OS'])):
-    ROOT = 'C:/Users/Xavi/Documents/u-tad/Modulo12'
+    ROOT = 'C:/Users/Xavi/Documents/u-tad/Modulo12/'
 path = 'https://xavi783.github.io/data/GiveMeSomeCredit/'
 
 # Cargamos los datos y la agrupación de datos por categoría.
@@ -37,26 +37,26 @@ test = pd.read_csv(path+'cs-test.csv',index_col=0)
 
 # # Preprocesado de datos
 
-# Comprobamos el número de NaNs por feature
-nnans = lambda x: np.isnan(x).sum()/x.shape[0]
-ax = nnans(traininig).plot(kind='bar',figsize=(10,6))
-fig = ax.get_figure()
-ax.set_xticklabels([VarRepl._retext(x.get_text(),replDict) for x in ax.get_xticklabels()],fontsize=10)
-plt.setp(ax.get_xticklabels(),rotation=30)
-fig.suptitle('% of NaNs')
-fig.subplots_adjust(.055,.16,.97,.93)
-ticks2perc(ax,1,100,0)
-
-# Dado que la salida es una variable booleana, comprobaremos como se distribuyen
-#  los NaN de #Dependants en cada clase
-gg = pd.DataFrame({k:nnans((traininig[(traininig[var_groups['out']]==k).values])) for k in [0,1]})
-ax = gg.plot(kind='bar',figsize=(10,6))
-fig = ax.get_figure()
-ax.set_xticklabels([VarRepl._retext(x.get_text(),replDict) for x in ax.get_xticklabels()],fontsize=10)
-plt.setp(ax.get_xticklabels(),rotation=30)
-ticks2perc(ax,1,100,0)
-fig.suptitle('% of NaNs in Each Output Category')
-fig.subplots_adjust(.055,.16,.97,.93)
+## Comprobamos el número de NaNs por feature
+#nnans = lambda x: np.isnan(x).sum()/x.shape[0]
+#ax = nnans(traininig).plot(kind='bar',figsize=(10,6))
+#fig = ax.get_figure()
+#ax.set_xticklabels([VarRepl._retext(x.get_text(),replDict) for x in ax.get_xticklabels()],fontsize=10)
+#plt.setp(ax.get_xticklabels(),rotation=30)
+#fig.suptitle('% of NaNs')
+#fig.subplots_adjust(.055,.16,.97,.93)
+#ticks2perc(ax,1,100,0)
+#
+## Dado que la salida es una variable booleana, comprobaremos como se distribuyen
+##  los NaN de #Dependants en cada clase
+#gg = pd.DataFrame({k:nnans((traininig[(traininig[var_groups['out']]==k).values])) for k in [0,1]})
+#ax = gg.plot(kind='bar',figsize=(10,6))
+#fig = ax.get_figure()
+#ax.set_xticklabels([VarRepl._retext(x.get_text(),replDict) for x in ax.get_xticklabels()],fontsize=10)
+#plt.setp(ax.get_xticklabels(),rotation=30)
+#ticks2perc(ax,1,100,0)
+#fig.suptitle('% of NaNs in Each Output Category')
+#fig.subplots_adjust(.055,.16,.97,.93)
 
 # Apreciamos que se distribuyen de manera muy similar, así que en un primer
 # momento no los tendremos encuenta para construir el modelo, eliminando los
@@ -83,43 +83,56 @@ from sklearn import metrics
 
 KF = StratifiedKFold(np.r_[trainB[var_groups.out].values.flat], n_folds=10) # cada fold tiene un 10% del total
 
+# balanceamos los test:
+
+
+# Usando SVMs:
 from sklearn.svm import SVC
 
-svcs,P,tP = {},{},{}
-for i,f,k in itt.izip(xrange(len(KF)),*itt.izip(*KF)):
-    svcs[i] = SVC()
-    svcs[i].fit(trainB[var_groups.familiarB].iloc[k].values, np.r_[trainB[var_groups.out].iloc[k].values.flat])
-    P[i] = svcs[i].predict(trainB[var_groups.familiarB].iloc[f])
-    tP[i] = np.r_[trainB[var_groups.out].iloc[f].values.flat]
-    
-mxconfs = pd.concat([pd.DataFrame(metrics.confusion_matrix(tp,p)) for tp,p in zip(tP.itervalues(),P.itervalues())],0)
+if ~os.path.exists(ROOT+'svcs.pk'):
+    svcs,P,tP = {},{},{}
+    for i,f,k in itt.izip(xrange(len(KF)),*itt.izip(*KF)):
+        svcs[i] = SVC()
+        svcs[i].fit(trainB[var_groups.familiarB].iloc[k].values, np.r_[trainB[var_groups.out].iloc[k].values.flat])
+        P[i] = svcs[i].predict(trainB[var_groups.familiarB].iloc[f])
+        tP[i] = np.r_[trainB[var_groups.out].iloc[f].values.flat]        
+    mxconfs = pd.concat([pd.DataFrame(metrics.confusion_matrix(tp,p)) for tp,p in zip(tP.itervalues(),P.itervalues())],0)    
+    pkl.dump(dict(svcs=svcs,P=P,tP=tP,KF=KF,mxconfs=mxconfs),open(ROOT+'svcs.pk','w+'))
+else:
+    data = pkl.dump(open(ROOT+'svcs.pk','r'))
+    globals().update(data)
 
-pkl.dump(dict(svcs=svcs,P=P,tP=tP,KF=KF),open(ROOT+'svcs.pk','w+'))
-
+# Usando KNN:
 from sklearn.neighbors import KNeighborsClassifier
 
-kncs,P,tP = {},{},{}
-for i,f,k in itt.izip(xrange(len(KF)),*itt.izip(*KF)):
-    kncs[i] = KNeighborsClassifier()
-    kncs[i].fit(trainB[var_groups.familiarB].iloc[k].values, np.r_[trainB[var_groups.out].iloc[k].values.flat])
-    P[i] = kncs[i].predict(trainB[var_groups.familiarB].iloc[f])
-    tP[i] = np.r_[trainB[var_groups.out].iloc[f].values.flat]
+if ~os.path.exists(ROOT+'kncs.pk'):    
+    kncs,P,tP = {},{},{}
+    for i,f,k in itt.izip(xrange(len(KF)),*itt.izip(*KF)):
+        kncs[i] = KNeighborsClassifier()
+        kncs[i].fit(trainB[var_groups.familiarB].iloc[k].values, np.r_[trainB[var_groups.out].iloc[k].values.flat])
+        P[i] = kncs[i].predict(trainB[var_groups.familiarB].iloc[f])
+        tP[i] = np.r_[trainB[var_groups.out].iloc[f].values.flat]    
+    mxconfs = pd.concat([pd.DataFrame(metrics.confusion_matrix(tp,p)) for tp,p in zip(tP.itervalues(),P.itervalues())],0)    
+    mxconfs = pkl.dump(dict(kncs=kncs,P=P,tP=tP,KF=KF,mxconfs=mxconfs),open(ROOT+'kncs.pk','w+'))
+else:
+    data = pkl.dump(open(ROOT+'kncs.pk','r'))
+    globals().update(data)
 
-pd.concat([pd.DataFrame(metrics.confusion_matrix(tp,p)) for tp,p in zip(tP.itervalues(),P.itervalues())],0)
-
-mxconfs = pkl.dump(dict(kncs=kncs,P=P,tP=tP,KF=KF),open(ROOT+'kncs.pk','w+'))
-
+# Usando Random Forests:    
 from sklearn.ensemble import RandomForestClassifier
 
-rfcs,P,tP = {},{},{}
-for i,f,k in itt.izip(xrange(len(KF)),*itt.izip(*KF)):
-    rfcs[i] = RandomForestClassifier(n_estimators=10)
-    rfcs[i].fit(trainB[var_groups.familiarB].iloc[k].values, np.r_[trainB[var_groups.out].iloc[k].values.flat])
-    P[i] = kncs[i].predict(trainB[var_groups.familiarB].iloc[f])
-    tP[i] = np.r_[trainB[var_groups.out].iloc[f].values.flat]
-
-mxconfs = pd.concat([pd.DataFrame(metrics.confusion_matrix(tp,p)) for tp,p in zip(tP.itervalues(),P.itervalues())],0)
-
-pkl.dump(dict(rfcs=rfcs,P=P,tP=tP,KF=KF,mxconfs=mxconfs),open(ROOT+'rfcs.pk','w+'))
+if ~os.path.exists(ROOT+'rfcs.pk'):   
+    rfcs,P,tP = {},{},{}
+    for i,f,k in itt.izip(xrange(len(KF)),*itt.izip(*KF)):
+        rfcs[i] = RandomForestClassifier(n_estimators=10)
+        rfcs[i].fit(trainB[var_groups.familiarB].iloc[k].values, np.r_[trainB[var_groups.out].iloc[k].values.flat])
+        P[i] = kncs[i].predict(trainB[var_groups.familiarB].iloc[f])
+        tP[i] = np.r_[trainB[var_groups.out].iloc[f].values.flat]
+    
+    mxconfs = pd.concat([pd.DataFrame(metrics.confusion_matrix(tp,p)) for tp,p in zip(tP.itervalues(),P.itervalues())],0)
+    pkl.dump(dict(rfcs=rfcs,P=P,tP=tP,KF=KF,mxconfs=mxconfs),open(ROOT+'rfcs.pk','w+'))
+else:
+    data = pkl.dump(open(ROOT+'rfcs.pk','r'))
+    globals().update(data)    
 
 #http://www.bigdataexaminer.com/dealing-with-unbalanced-classes-svm-random-forests-and-decision-trees-in-python/
