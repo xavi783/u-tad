@@ -4,6 +4,7 @@ Created on Sat Mar 28 16:32:51 2015
 
 @author: x
 """
+import os,re
 import urllib2
 import numpy as np
 import pandas as pd
@@ -12,6 +13,9 @@ from bs4 import  BeautifulSoup as bs4
 from charts.generic import ticks2perc
 from variables.variables import VarRepl
 
+ROOT = '/home/x/Documentos/'
+if any(re.findall('^[wW]in.+',os.environ['OS'])):
+    ROOT = 'C:/Users/Xavi/Documents/u-tad/Modulo12'
 path = 'https://xavi783.github.io/data/GiveMeSomeCredit/'
 
 # Cargamos los datos y la agrupación de datos por categoría.
@@ -90,7 +94,7 @@ for i,f,k in itt.izip(xrange(len(KF)),*itt.izip(*KF)):
     
 mxconfs = pd.concat([pd.DataFrame(metrics.confusion_matrix(tp,p)) for tp,p in zip(tP.itervalues(),P.itervalues())],0)
 
-pkl.dump(dict(svcs=svcs,P=P,tP=tP,KF=KF),open('/home/x/Documentos/svcs.pk','w+'))
+pkl.dump(dict(svcs=svcs,P=P,tP=tP,KF=KF),open(ROOT+'svcs.pk','w+'))
 
 from sklearn.neighbors import KNeighborsClassifier
 
@@ -103,7 +107,7 @@ for i,f,k in itt.izip(xrange(len(KF)),*itt.izip(*KF)):
 
 pd.concat([pd.DataFrame(metrics.confusion_matrix(tp,p)) for tp,p in zip(tP.itervalues(),P.itervalues())],0)
 
-mxconfs = pkl.dump(dict(kncs=kncs,P=P,tP=tP,KF=KF),open('/home/x/Documentos/kncs.pk','w+'))
+mxconfs = pkl.dump(dict(kncs=kncs,P=P,tP=tP,KF=KF),open(ROOT+'kncs.pk','w+'))
 
 from sklearn.ensemble import RandomForestClassifier
 
@@ -116,6 +120,6 @@ for i,f,k in itt.izip(xrange(len(KF)),*itt.izip(*KF)):
 
 mxconfs = pd.concat([pd.DataFrame(metrics.confusion_matrix(tp,p)) for tp,p in zip(tP.itervalues(),P.itervalues())],0)
 
-pkl.dump(dict(rfcs=rfcs,P=P,tP=tP,KF=KF,mxconfs=mxconfs),open('/home/x/Documentos/rfcs.pk','w+'))
+pkl.dump(dict(rfcs=rfcs,P=P,tP=tP,KF=KF,mxconfs=mxconfs),open(ROOT+'rfcs.pk','w+'))
 
 #http://www.bigdataexaminer.com/dealing-with-unbalanced-classes-svm-random-forests-and-decision-trees-in-python/
