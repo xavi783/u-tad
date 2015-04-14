@@ -13,7 +13,8 @@ from variables.variables import VarRepl
 
 ROOT = '/home/x/Documentos/'
 if 'OS' in list(os.environ) and any(re.findall('^[wW]in.+',os.environ['OS'])):
-    ROOT = 'C:/Users/Xavi/Documents/u-tad/Modulo12/'
+#    ROOT = 'C:/Users/Xavi/Documents/u-tad/Modulo12/'
+    ROOT = 'D:/Users/jserrano/Documents/u-tad/Modulo12/'
 path = 'https://xavi783.github.io/data/GiveMeSomeCredit/'
 
 # Cargamos los datos y la agrupación de datos por categoría.
@@ -38,32 +39,6 @@ import matplotlib.pyplot as plt
 from charts.generic import ticks2perc
 # Comprobamos el número de NaNs por feature
 nnans = lambda x: np.isnan(x).sum()/x.shape[0]
-ax = nnans(traininig).plot(kind='bar',figsize=(10,6))
-fig = ax.get_figure()
-ax.set_xticklabels([VarRepl._retext(x.get_text(),replDict) for x in ax.get_xticklabels()],fontsize=10)
-plt.setp(ax.get_xticklabels(),rotation=30)
-fig.suptitle('% of NaNs')
-fig.subplots_adjust(.055,.16,.97,.93)
-ticks2perc(ax,1,100,0)
-
-ax = nnans(test).plot(kind='bar',figsize=(10,6))
-fig = ax.get_figure()
-ax.set_xticklabels([VarRepl._retext(x.get_text(),replDict) for x in ax.get_xticklabels()],fontsize=10)
-plt.setp(ax.get_xticklabels(),rotation=30)
-fig.suptitle('% of NaNs')
-fig.subplots_adjust(.055,.16,.97,.93)
-ticks2perc(ax,1,100,0)
-
-# Dado que la salida es una variable booleana, comprobaremos como se distribuyen
-#  los NaN de #Dependants en cada clase
-gg = pd.DataFrame({k:nnans((traininig[(traininig[var_groups['out']]==k).values])) for k in [0,1]})
-ax = gg.plot(kind='bar',figsize=(10,6))
-fig = ax.get_figure()
-ax.set_xticklabels([VarRepl._retext(x.get_text(),replDict) for x in ax.get_xticklabels()],fontsize=10)
-plt.setp(ax.get_xticklabels(),rotation=30)
-ticks2perc(ax,1,100,0)
-fig.suptitle('% of NaNs in Each Output Category')
-fig.subplots_adjust(.055,.16,.97,.93)
 
 # Apreciamos que se distribuyen de manera muy similar, así que en un primer
 # momento no los tendremos encuenta para construir el modelo, eliminando los
@@ -147,18 +122,12 @@ def build_classififers(Classifier, params, name):
     else:
         print 'Ya existe el archivo: '+ROOT+name+'.pk'
         
-map(build_classififers,Classifiers,params,names)
-
-auc = map(lambda name: (lambda d: metrics.roc_auc_score(d['tP'][d['optimum']],d['mP'][d['optimum']]))(pkl.load(open(ROOT+name+'.pk','r'))),names)
-
 # Los mejores son: Random Forest y SVM:
 def predict_proba(classifier, test):
     INS = np.r_[var_groups.dues,var_groups.familiarB,var_groups.loans]
     probs = [[index + 1, x[1]] for index, x in enumerate(classifier.predict_proba(test[INS]))]
     np.savetxt(ROOT+'submission.csv', probs, delimiter=',', fmt='%d,%f', header='Id,Probability', comments = '')
     return probs
- 
-test.loc[np.isnan(test['NumberOfDependents']),'NumberOfDependents'] = np.mean(test.loc[~np.isnan(test['NumberOfDependents']),'NumberOfDependents'])
 
 class MultiClassifier(object):
     def __init__(self,dictClassifiers):
@@ -173,13 +142,44 @@ class MultiClassifier(object):
         p = np.r_[p].sum(0)
         return np.c_[np.arange(len(p)),p]
 
-d = pkl.load(open(ROOT+names[0]+'.pk','r'))
-d1 = pkl.load(open(ROOT+names[-1]+'.pk','r'))
+if __name__=="__main__":
+    ax = nnans(traininig).plot(kind='bar',figsize=(10,6))
+    fig = ax.get_figure()
+    ax.set_xticklabels([VarRepl._retext(x.get_text(),replDict) for x in ax.get_xticklabels()],fontsize=10)
+    plt.setp(ax.get_xticklabels(),rotation=30)
+    fig.suptitle('% of NaNs')
+    fig.subplots_adjust(.055,.16,.97,.93)
+    ticks2perc(ax,1,100,0)
+    
+    ax = nnans(test).plot(kind='bar',figsize=(10,6))
+    fig = ax.get_figure()
+    ax.set_xticklabels([VarRepl._retext(x.get_text(),replDict) for x in ax.get_xticklabels()],fontsize=10)
+    plt.setp(ax.get_xticklabels(),rotation=30)
+    fig.suptitle('% of NaNs')
+    fig.subplots_adjust(.055,.16,.97,.93)
+    ticks2perc(ax,1,100,0)
+    
+    # Dado que la salida es una variable booleana, comprobaremos como se distribuyen
+    #  los NaN de #Dependants en cada clase
+    gg = pd.DataFrame({k:nnans((traininig[(traininig[var_groups['out']]==k).values])) for k in [0,1]})
+    ax = gg.plot(kind='bar',figsize=(10,6))
+    fig = ax.get_figure()
+    ax.set_xticklabels([VarRepl._retext(x.get_text(),replDict) for x in ax.get_xticklabels()],fontsize=10)
+    plt.setp(ax.get_xticklabels(),rotation=30)
+    ticks2perc(ax,1,100,0)
+    fig.suptitle('% of NaNs in Each Output Category')
+    fig.subplots_adjust(.055,.16,.97,.93)
 
-predict_proba(MultiClassifier(d['clf'][d['optimum']]),test)
-
-#clasif2 = {k:v for k,v in enumerate(list(d['clf'][d['optimum']].itervalues())+list(d1['clf'][d1['optimum']].itervalues()))}
-#predict_proba(MultiClassifier(clasif2),test)
-
-# mxconfs = pd.concat([ pd.DataFrame(metrics.confusion_matrix(tp,p)) for tp,p in zip(tP.itervalues(),mP.itervalues())],0)
-##http://www.bigdataexaminer.com/dealing-with-unbalanced-classes-svm-random-forests-and-decision-trees-in-python/
+    map(build_classififers,Classifiers,params,names)
+    auc = map(lambda name: (lambda d: metrics.roc_auc_score(d['tP'][d['optimum']],d['mP'][d['optimum']]))(pkl.load(open(ROOT+name+'.pk','r'))),names) 
+    test.loc[np.isnan(test['NumberOfDependents']),'NumberOfDependents'] = np.mean(test.loc[~np.isnan(test['NumberOfDependents']),'NumberOfDependents'])
+    
+    d = pkl.load(open(ROOT+names[0]+'.pk','r'))
+    d1 = pkl.load(open(ROOT+names[-1]+'.pk','r'))
+    predict_proba(MultiClassifier(d['clf'][d['optimum']]),test)
+    
+    clasif2 = {k:v for k,v in enumerate(list(d['clf'][d['optimum']].itervalues())+list(d1['clf'][d1['optimum']].itervalues()))}
+    predict_proba(MultiClassifier(clasif2),test)
+    
+    ## mxconfs = pd.concat([ pd.DataFrame(metrics.confusion_matrix(tp,p)) for tp,p in zip(tP.itervalues(),mP.itervalues())],0)
+    ##http://www.bigdataexaminer.com/dealing-with-unbalanced-classes-svm-random-forests-and-decision-trees-in-python/
