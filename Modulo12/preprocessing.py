@@ -4,12 +4,16 @@ Created on Sat Mar 28 16:32:51 2015
 
 @author: x
 """
+import sys
+sys.path.append('/home/x/Documentos/python-toolbox')
+
 import os,re
 import urllib2
 import numpy as np
 import pandas as pd
 from bs4 import  BeautifulSoup as bs4
 from variables.variables import VarRepl
+import matplotlib.pyplot as plt
 
 ROOT = '/home/x/Documentos/'
 if 'OS' in list(os.environ) and any(re.findall('^[wW]in.+',os.environ['OS'])):
@@ -56,8 +60,8 @@ outliers1 = lambda x: trainB[var_groups.out][((trainB[var_groups.dues] > x*train
 outliers2 = {0: lambda x: trainB[var_groups.out][trainB[var_groups.dues[0]] > x*trainB[var_groups.dues[0]].std()],
              1: lambda x: trainB[var_groups.out][trainB[var_groups.dues[1]] > x*trainB[var_groups.dues[1]].std()],
              2: lambda x: trainB[var_groups.out][trainB[var_groups.dues[2]] > x*trainB[var_groups.dues[2]].std()]}
-pd.Series(map(lambda x: (x.sum()/x.shape[0]).SeriousDlqin2yrs,[outliers1(n) for n in xrange(1,10)])).plot()
-pd.DataFrame({k: map(lambda x: (1.*x.sum()/len(x)).SeriousDlqin2yrs, [outliers2[k](n) for n in xrange(1,10)]) for k in xrange(3)}).plot()
+#pd.Series(map(lambda x: (x.sum()/x.shape[0]).SeriousDlqin2yrs,[outliers1(n) for n in xrange(1,10)])).plot()
+#pd.DataFrame({k: map(lambda x: (1.*x.sum()/len(x)).SeriousDlqin2yrs, [outliers2[k](n) for n in xrange(1,10)]) for k in xrange(3)}).plot()
 
 # Debido a lo equilibrado que están las variables de salida respecto a los outliers
 # de la estructura de Dues, creemos que no es el mejor onjunto de variables para
@@ -90,6 +94,21 @@ from sklearn.neighbors import KNeighborsClassifier
 Classifiers = [RandomForestClassifier, KNeighborsClassifier, SVC, GaussianNB]
 params = [dict(n_estimators=100, n_jobs=3), {}, {}, {}]
 names = ['randomforest','knn','svm','naivebayes']
+
+INS = np.r_[var_groups.dues,var_groups.familiarB,var_groups.loans]
+
+class MultiClassifier(object):
+    def __init__(self,dictClassifiers):
+        self.__dict__.update(dictClassifiers)
+        self.classifiers = dictClassifiers
+        self.weights = np.ones(len(self.classifiers))/len(self.classifiers)
+        
+    def predict_proba(self,test,weigths=None):
+        if type(weigths)!=type(None):
+            self.weights = weigths
+        p = [self.weights[i]*clf.predict_proba(test)[:,1] for i,clf in self.classifiers.iteritems()]
+        p = np.r_[p].sum(0)
+        return np.c_[np.arange(len(p)),p]
 
 def build_classififers(Classifier, params, name):
     if ~os.path.exists(ROOT+name+'.pk'):   
@@ -124,51 +143,58 @@ def build_classififers(Classifier, params, name):
         
 # Los mejores son: Random Forest y SVM:
 def predict_proba(classifier, test):
-    INS = np.r_[var_groups.dues,var_groups.familiarB,var_groups.loans]
     probs = [[index + 1, x[1]] for index, x in enumerate(classifier.predict_proba(test[INS]))]
     np.savetxt(ROOT+'submission.csv', probs, delimiter=',', fmt='%d,%f', header='Id,Probability', comments = '')
-    return probs
+    return probs        
 
-class MultiClassifier(object):
-    def __init__(self,dictClassifiers):
-        self.__dict__.update(dictClassifiers)
-        self.classifiers = dictClassifiers
-        self.weights = np.ones(len(self.classifiers))/len(self.classifiers)
-        
-    def predict_proba(self,test,weigths=None):
-        if type(weigths)!=type(None):
-            self.weights = weigths
-        p = [self.weights[i]*clf.predict_proba(test)[:,1] for i,clf in self.classifiers.iteritems()]
-        p = np.r_[p].sum(0)
-        return np.c_[np.arange(len(p)),p]
+def plot_NaNs_info(caso,ax=None):
+    if caso==1:
+        if type(ax)==type(None):
+            ax = nnans(traininig).plot(kind='bar',figsize=(10,6))
+        else:
+            nnans(traininig).plot(kind='bar',ax=ax)
+        ax.set_xticklabels([VarRepl._retext(x.get_text(),replDict) for x in ax.get_xticklabels()],fontsize=10)
+        plt.setp(ax.get_xticklabels(),rotation=30)
+        ax.set_title('% of NaNs in training set')
+        ticks2perc(ax,1,100,0)
+    if caso==2:
+        if type(ax)==type(None):
+            ax = nnans(test).plot(kind='bar',figsize=(10,6))
+        else:
+            nnans(test).plot(kind='bar',ax=ax)
+        ax.set_xticklabels([VarRepl._retext(x.get_text(),replDict) for x in ax.get_xticklabels()],fontsize=10)
+        plt.setp(ax.get_xticklabels(),rotation=30)
+        ax.set_title('% of NaNs in test set')
+        ticks2perc(ax,1,100,0)
+    if caso==3:
+        # Dado que la salida es una variable booleana, comprobaremos como se distribuyen
+        #  los NaN de #Dependants en cada clase
+        gg = pd.DataFrame({k:nnans((traininig[(traininig[var_groups['out']]==k).values])) for k in [0,1]})
+        if type(ax)==type(None):
+            ax = gg.plot(kind='bar',figsize=(10,6))
+        else:
+            gg.plot(kind='bar',ax=ax)
+        ax.set_xticklabels([VarRepl._retext(x.get_text(),replDict) for x in ax.get_xticklabels()],fontsize=10)
+        plt.setp(ax.get_xticklabels(),rotation=30)
+        ticks2perc(ax,1,100,0)
+        ax.set_title('% of NaNs in Each Output Category, training set')
+    if caso==4:
+        # Dado que la salida es una variable booleana, comprobaremos como se distribuyen
+        #  los NaN de #Dependants en cada clase
+        gg = pd.DataFrame({k:nnans((test[(test[var_groups['out']]==k).values])) for k in [0,1]})
+        if type(ax)==type(None):
+            ax = gg.plot(kind='bar',figsize=(10,6))
+        else:
+            gg.plot(kind='bar',ax=ax)
+        ax.set_xticklabels([VarRepl._retext(x.get_text(),replDict) for x in ax.get_xticklabels()],fontsize=10)
+        plt.setp(ax.get_xticklabels(),rotation=30)
+        ticks2perc(ax,1,100,0)
+        ax.set_title('% of NaNs in Each Output Category, test set')
+#         ax.get_figure().subplots_adjust(.055,.16,.97,.93)
 
-if __name__=="__main__":
-    ax = nnans(traininig).plot(kind='bar',figsize=(10,6))
-    fig = ax.get_figure()
-    ax.set_xticklabels([VarRepl._retext(x.get_text(),replDict) for x in ax.get_xticklabels()],fontsize=10)
-    plt.setp(ax.get_xticklabels(),rotation=30)
-    fig.suptitle('% of NaNs')
-    fig.subplots_adjust(.055,.16,.97,.93)
-    ticks2perc(ax,1,100,0)
-    
-    ax = nnans(test).plot(kind='bar',figsize=(10,6))
-    fig = ax.get_figure()
-    ax.set_xticklabels([VarRepl._retext(x.get_text(),replDict) for x in ax.get_xticklabels()],fontsize=10)
-    plt.setp(ax.get_xticklabels(),rotation=30)
-    fig.suptitle('% of NaNs')
-    fig.subplots_adjust(.055,.16,.97,.93)
-    ticks2perc(ax,1,100,0)
-    
-    # Dado que la salida es una variable booleana, comprobaremos como se distribuyen
-    #  los NaN de #Dependants en cada clase
-    gg = pd.DataFrame({k:nnans((traininig[(traininig[var_groups['out']]==k).values])) for k in [0,1]})
-    ax = gg.plot(kind='bar',figsize=(10,6))
-    fig = ax.get_figure()
-    ax.set_xticklabels([VarRepl._retext(x.get_text(),replDict) for x in ax.get_xticklabels()],fontsize=10)
-    plt.setp(ax.get_xticklabels(),rotation=30)
-    ticks2perc(ax,1,100,0)
-    fig.suptitle('% of NaNs in Each Output Category')
-    fig.subplots_adjust(.055,.16,.97,.93)
+#__main__
+#__test__
+if __name__=="__test__":
 
     map(build_classififers,Classifiers,params,names)
     auc = map(lambda name: (lambda d: metrics.roc_auc_score(d['tP'][d['optimum']],d['mP'][d['optimum']]))(pkl.load(open(ROOT+name+'.pk','r'))),names) 
